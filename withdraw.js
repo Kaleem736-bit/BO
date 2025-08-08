@@ -1,0 +1,1 @@
+﻿export default function Withdraw(){ return (<div className='p-6 max-w-md mx-auto'><h2 className='text-xl mb-3'>ط³ط­ط¨ ط§ظ„ط£ط±ط¨ط§ط­</h2><p className='text-sm mb-3'>ط§ط®طھط± ط·ط±ظٹظ‚ط©: ط­ظˆط§ظ„ط© ط¨ظ†ظƒظٹط© ط£ظˆ ظ…ط­ظپط¸ط© USDT (ظ…ظˆط¯ظٹظ„).</p><button className='button-secondary px-4 py-2 rounded'>ط·ظ„ط¨ ط³ط­ط¨ (ظ…ظˆط¯ظٹظ„)</button></div>) }
