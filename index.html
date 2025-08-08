@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>بوكر ويب - جعفر السيد</title>
+
+<!-- GSAP for animations -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+<link rel="stylesheet" href="/styles.css">
+<style>
+  /* إضافات UI صغيرة خاصة بالصفحة */
+  .lang-switch { position: absolute; top: 12px; left: 12px; z-index:50 }
+  .avatar-preview{width:64px;height:64px;border-radius:50%;object-fit:cover}
+  .sound-toggle{margin-left:8px}
+  .seat-option{display:inline-block;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.06);margin:4px;cursor:pointer}
+  .seat-option.active{background:#e3a500;color:#000}
+</style>
+</head>
+<body>
+  <div class="lang-switch">
+    <select id="ui-lang" onchange="changeLang(this.value)">
+      <option value="ar">العربية</option>
+      <option value="en">English</option>
+      <option value="hi">हिन्दी</option>
+      <option value="fr">Français</option>
+      <option value="it">Italiano</option>
+    </select>
+  </div>
+
+  <header class="topbar">
+    <img src="/شعار اللعبة" class="logo" alt="logo">
+    <div style="flex:1"></div>
+    <div class="top-actions">
+      <span id="balance">0.00</span>
+      <button id="btn-logout" class="small">خروج</button>
+      <label class="sound-toggle">الصوت <input id="sound-toggle" type="checkbox" checked></label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidemenu" id="side-menu">
+      <div class="profile-box">
+        <img id="profile-avatar" src="" class="avatar-preview" alt="avatar"/>
+        <div id="profile-name">زائر</div>
+        <div id="profile-email" style="opacity:.8;font-size:13px"></div>
+      </div>
+      <nav>
+        <button onclick="showSection('lobby')">اللوبي</button>
+        <button onclick="showSection('profile')">معلومات الحساب</button>
+        <button onclick="showSection('charge')">شحن الرصيد</button>
+        <button onclick="showSection('withdraw')">سحب الأرباح</button>
+        <button onclick="showSection('support')">تواصل مع المشرف</button>
+      </nav>
+      <hr/>
+      <div style="padding:8px">
+        <div>اختر مستوى اللعب</div>
+        <div style="margin-top:8px">
+          <button onclick="enterRoom('room_ruby')">مبتدئ - الياقوت</button>
+          <button onclick="enterRoom('room_emerald')">متوسط - الزمرد</button>
+          <button onclick="enterRoom('room_gold')">محترف - الغرفة الذهبية</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="main">
+      <!-- Auth / Register -->
+      <div id="auth" class="card center">
+        <h2>تسجيل مستخدم جديد</h2>
+        <div style="display:flex;gap:8px">
+          <input id="reg_first" placeholder="الاسم الأول"/>
+          <input id="reg_last" placeholder="الاسم الأخير"/>
+        </div>
+        <input id="reg_phone" placeholder="رقم الجوال"/>
+        <div>
+          <select id="reg_country">
+            <option value="SA">المملكة العربية السعودية (+966)</option>
+            <option value="AE">الإمارات (+971)</option>
+            <option value="EG">مصر (+20)</option>
+            <option value="IN">الهند (+91)</option>
+            <option value="US">الولايات المتحدة (+1)</option>
+          </select>
+        </div>
+        <input id="reg_email" placeholder="البريد الإلكتروني"/>
+        <input id="reg_pass" type="password" placeholder="كلمة المرور"/>
+        <div>
+          <label>اللغة</label>
+          <select id="reg_lang">
+            <option value="ar">العربية</option><option value="en">English</option><option value="hi">हिन्दी</option>
+          </select>
+        </div>
+        <div>
+          <label>الصورة الشخصية</label>
+          <input id="reg_avatar" type="file" accept="image/*" onchange="previewAvatar(this)"/>
+          <img id="reg_avatar_preview" class="avatar-preview" src="" style="display:none"/>
+        </div>
+        <button onclick="register()">تسجيل وإنشاء حساب</button>
+
+        <div style="margin-top:18px">
+          <h3>تسجيل دخول</h3>
+          <input id="login_email" placeholder="البريد الإلكتروني"/>
+          <input id="login_pass" type="password" placeholder="كلمة المرور"/>
+          <button onclick="login()">دخول</button>
+        </div>
+
+        <div id="verify-area" style="display:none;margin-top:10px">
+          <p>أدخل رمز التحقق المرسل لبريدك</p>
+          <input id="verify_code" placeholder="رمز التحقق"/>
+          <button onclick="verifyEmail()">تحقق</button>
+        </div>
+      </div>
+
+      <!-- Lobby -->
+      <div id="lobby" class="card" style="display:none">
+        <h2>اللوبي</h2>
+        <div class="rooms">
+          <div class="room-card" onclick="enterRoom('room_ruby')">
+            <img src="/طاولة غرفة الياقوت" alt="ruby"/>
+            <div class="label">غرفة الياقوت</div>
+          </div>
+          <div class="room-card" onclick="enterRoom('room_emerald')">
+            <img src="/طاولة غرفة الزمرجد" alt="emerald"/>
+            <div class="label">غرفة الزمرد</div>
+          </div>
+          <div class="room-card" onclick="enterRoom('room_gold')">
+            <img src="/طاولة الغرفة الذهبيه" alt="gold"/>
+            <div class="label">الغرفة الذهبية</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Room -->
+      <div id="room" class="card" style="display:none">
+        <button onclick="leaveRoom()">عودة</button>
+        <h2 id="room-name">الغرفة</h2>
+        <div class="room-top">
+          <div style="display:flex;gap:8px;align-items:center">
+            <div>عدد اللاعبين:</div>
+            <div class="seat-option" id="seat-2" onclick="chooseSeats(2)">2 لاعبين</div>
+            <div class="seat-option active" id="seat-4" onclick="chooseSeats(4)">4 لاعبين</div>
+          </div>
+          <div style="margin-left:auto">
+            <label>الرهان: </label>
+            <select id="stake-select">
+              <option value="5">5</option><option value="10">10</option><option value="50">50</option><option value="100">100</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-area">
+          <img id="table-image" src="/طاولة غرفة الياقوت" class="table-bg" alt="table"/>
+          <div id="players-area"></div>
+          <div id="cards-area"></div>
+
+          <div class="controls">
+            <input id="bet-amt" type="number" placeholder="مبلغ الرهان" value="10"/>
+            <button onclick="emitAction('bet')">رهان</button>
+            <button onclick="emitAction('call')">مطابقة</button>
+            <button onclick="emitAction('fold')">انسحاب</button>
+            <button onclick="startRound()">ابدأ الجولة</button>
+          </div>
+
+          <div class="chat">
+            <div id="chat-box" class="chat-box"></div>
+            <input id="chat-input" placeholder="أرسل رسالة..." onkeydown="if(event.key==='Enter') sendChat()"/>
+            <button onclick="sendChat()">إرسال</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- profile -->
+      <div id="profile" class="card" style="display:none">
+        <h2>الملف الشخصي</h2>
+        <div>
+          <img id="profile-avatar-2" class="avatar-preview" src=""/>
+          <div><input id="pf_first" placeholder="الاسم الأول"/></div>
+          <div><input id="pf_last" placeholder="الاسم الأخير"/></div>
+          <div><input id="pf_phone" placeholder="رقم الجوال"/></div>
+          <div><select id="pf_lang"><option value="ar">العربية</option><option value="en">English</option></select></div>
+          <button onclick="updateProfile()">حفظ التعديلات</button>
+        </div>
+      </div>
+
+      <!-- charge -->
+      <div id="charge" class="card" style="display:none">
+        <h2>شحن الرصيد</h2>
+        <input id="charge-amount" type="number" placeholder="المبلغ"/>
+        <select id="charge-method"><option value="bank">حوالة بنكية (إدارية)</option><option value="usdt">USDT</option></select>
+        <button onclick="requestDeposit()">طلب الشحن</button>
+      </div>
+
+      <!-- withdraw -->
+      <div id="withdraw" class="card" style="display:none">
+        <h2>سحب الأرباح</h2>
+        <input id="withdraw-amount" type="number" placeholder="المبلغ"/>
+        <select id="withdraw-method"><option value="bank">تحويل بنكي</option><option value="usdt">محفظة USDT</option></select>
+        <button onclick="requestWithdraw()">طلب سحب</button>
+      </div>
+
+      <!-- support -->
+      <div id="support" class="card" style="display:none">
+        <h2>تواصل مع المشرف</h2>
+        <input id="support-sub" placeholder="الموضوع"/>
+        <textarea id="support-msg" placeholder="اكتب مشكلتك هنا..."></textarea>
+        <button onclick="contactSupport()">إرسال للمشرف</button>
+      </div>
+    </section>
+  </main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+/* Frontend JS: واجهة + socket logic + animations + صوت */
+const socket = io();
+let token = localStorage.getItem('token');
+let currentRoom = null;
+let seatCount = 4;
+let soundEnabled = true;
+const audio = { click:'/sounds/click.mp3', deal:'/sounds/card-deal.mp3', flip:'/sounds/flip.mp3', win:'/sounds/win.mp3' };
+
+document.getElementById('sound-toggle').addEventListener('change', (e)=> soundEnabled = e.target.checked);
+
+if(token) socket.emit('auth', token);
+
+socket.on('auth_ok', d => console.log('socket authed', d));
+socket.on('room_state', s => renderPlayers(s.players));
+socket.on('deal_cards', ({cards}) => renderDealtCards(cards));
+socket.on('chat_message', m => appendChat(m));
+socket.on('round_started', d => {
+  appendChat({from:'system', content:'الجولة بدأت — seedHash: '+d.seedHash});
+});
+socket.on('error', e => console.warn('socket error', e));
+
+function playSound(name){ if(!soundEnabled) return; const a = new Audio(name); a.volume = 0.6; a.play().catch(()=>{}); }
+
+// Animations on homepage bg
+gsap.from('.logo', {duration:1.2, scale:0.8, opacity:0, ease:'elastic.out(1,0.6)'});
+gsap.to('body', {duration:18, backgroundPosition:'0% 100%', repeat:-1, yoyo:true, ease:'sine.inOut'});
+
+// UI helpers
+function showSection(id) {
+  ['auth','lobby','room','profile','charge','withdraw','support'].forEach(s => document.getElementById(s).style.display='none');
+  document.getElementById(id).style.display = 'block';
+}
+
+function previewAvatar(inp){
+  const f = inp.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('reg_avatar_preview').src = e.target.result;
+    document.getElementById('reg_avatar_preview').style.display='block';
+    document.getElementById('reg_avatar_preview').dataset.base64 = e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+
+function register(){
+  const body = {
+    first_name: document.getElementById('reg_first').value,
+    last_name: document.getElementById('reg_last').value,
+    phone: document.getElementById('reg_phone').value,
+    country: document.getElementById('reg_country').value,
+    email: document.getElementById('reg_email').value,
+    password: document.getElementById('reg_pass').value,
+    lang: document.getElementById('reg_lang').value,
+    avatar: document.getElementById('reg_avatar_preview').dataset.base64 || ''
+  };
+  fetch('/api/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+    .then(r=>r.json()).then(r=>{
+      if(r.ok){ alert('تم التسجيل — تحقق من بريدك (mock) للحصول على الرمز'); localStorage.setItem('pendingUser', r.userId); document.getElementById('verify-area').style.display='block'; }
+      else alert(JSON.stringify(r));
+    });
+}
+
+function verifyEmail(){
+  const code = document.getElementById('verify_code').value;
+  const userId = localStorage.getItem('pendingUser');
+  fetch('/api/verify-email', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({userId, code})})
+    .then(r=>r.json()).then(r => { if(r.ok) alert('تم التحقق، يمكنك تسجيل الدخول'); else alert(JSON.stringify(r)); });
+}
+
+function login(){
+  const email = document.getElementById('login_email').value;
+  const pass = document.getElementById('login_pass').value;
+  fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, password: pass})})
+    .then(r=>r.json()).then(r=>{
+      if(r.ok){ token = r.token; localStorage.setItem('token', token); document.getElementById('balance').innerText = r.user.balance.toFixed(2); document.getElementById('profile-name').innerText = r.user.first_name || r.user.email; if(r.user.avatar){ document.getElementById('profile-avatar').src = r.user.avatar; document.getElementById('profile-avatar-2').src = r.user.avatar } socket.emit('auth', token); showSection('lobby'); } else alert(JSON.stringify(r));
+    });
+}
+
+function enterRoom(roomId){
+  if(!token){ alert('سجل الدخول أولاً'); return; }
+  currentRoom = roomId;
+  fetch('/api/rooms').then(r=>r.json()).then(rows=>{
+    const room = rows.find(x => x.id === roomId);
+    document.getElementById('room-name').innerText = room ? room.name : 'غرفة';
+    document.getElementById('table-image').src = '/' + (room ? room.table_image : 'طاولة غرفة الياقوت');
+    showSection('room');
+    socket.emit('join_room', {roomId, seatChoice: seatCount});
+    playSound(audio.click);
+  });
+}
+
+function leaveRoom(){ if(currentRoom) { socket.emit('leave_room', {roomId: currentRoom}); currentRoom = null; showSection('lobby'); } }
+
+function renderPlayers(players){
+  const el = document.getElementById('players-area'); el.innerHTML = '';
+  players.forEach((p,i)=>{
+    const div = document.createElement('div'); div.className='player-slot';
+    div.style.order = i;
+    div.innerHTML = `<div class="p-avatar">${p.avatar ? '<img src="'+p.avatar+'" style="width:40px;height:40px;border-radius:50%"/>' : (p.name[0]||'U')}</div><div class="p-name">${p.name}</div><div class="p-balance">${(p.balance||0).toFixed(2)}</div>`;
+    el.appendChild(div);
+  });
+}
+
+function renderDealtCards(cards){
+  const ca = document.getElementById('cards-area'); ca.innerHTML = '';
+  cards.forEach((c, idx)=>{
+    const card = document.createElement('div'); card.className='card'; card.innerText = '??';
+    ca.appendChild(card);
+    // animation: fly from center then flip
+    gsap.fromTo(card, {y:-50, scale:0.5, opacity:0}, {duration:0.6, y:0, scale:1, opacity:1, delay: idx*0.12, onComplete: ()=> {
+      // flip to reveal
+      setTimeout(()=> { card.innerText = c.id; playSound(audio.flip); }, 220);
+    }});
+  });
+  playSound(audio.deal);
+}
+
+function appendChat(m){
+  const cb = document.getElementById('chat-box');
+  const el = document.createElement('div'); el.className='chat-line';
+  el.textContent = (m.private? '[خاص] ':'') + (m.from || 'مجهول') + ': ' + m.content;
+  cb.appendChild(el); cb.scrollTop = cb.scrollHeight;
+}
+
+function sendChat(){
+  const text = document.getElementById('chat-input').value;
+  if(!text || !currentRoom) return;
+  socket.emit('chat_message', {roomId: currentRoom, content: text, isPrivate:false});
+  document.getElementById('chat-input').value='';
+}
+
+function startRound(){ if(!currentRoom) return alert('ادخل غرفة أولاً'); socket.emit('start_round', {roomId: currentRoom}); playSound(audio.click); }
+
+function emitAction(action){
+  const amt = Number(document.getElementById('bet-amt').value || 0);
+  socket.emit('player_action', {roomId: currentRoom, action, amount: amt});
+  playSound(audio.click);
+}
+
+function requestDeposit(){
+  const amt = Number(document.getElementById('charge-amount').value);
+  const method = document.getElementById('charge-method').value;
+  fetch('/api/request-deposit', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({method,amount:amt})})
+    .then(r=>r.json()).then(r=>{ if(r.ok) alert('تم إرسال طلب الشحن'); else alert(JSON.stringify(r)); });
+}
+
+function requestWithdraw(){
+  const amt = Number(document.getElementById('withdraw-amount').value);
+  const method = document.getElementById('withdraw-method').value;
+  fetch('/api/request-withdraw', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({method,amount:amt})})
+    .then(r=>r.json()).then(r=>{ if(r.ok) alert('تم إرسال طلب السحب'); else alert(JSON.stringify(r)); });
+}
+
+function updateProfile(){
+  const body = {
+    first_name: document.getElementById('pf_first').value,
+    last_name: document.getElementById('pf_last').value,
+    avatar: document.getElementById('profile-avatar-2').src,
+    lang: document.getElementById('pf_lang').value,
+    phone: document.getElementById('pf_phone').value,
+    country: ''
+  };
+  fetch('/api/update-profile', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify(body)})
+    .then(r=>r.json()).then(r=>{ if(r.ok) alert('تم تحديث الملف'); else alert(JSON.stringify(r)); });
+}
+
+function contactSupport(){
+  const subject = document.getElementById('support-sub').value;
+  const message = document.getElementById('support-msg').value;
+  fetch('/api/contact-support', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({subject, message})})
+    .then(r=>r.json()).then(r=>{ if(r.ok) alert('تم إرسال الرسالة للمشرف'); else alert(JSON.stringify(r)); });
+}
+
+function chooseSeats(n){
+  seatCount = n;
+  document.querySelectorAll('.seat-option').forEach(el=>el.classList.remove('active'));
+  document.getElementById('seat-'+n).classList.add('active');
+}
+
+function changeLang(l){
+  // في النسخة المبسطة نغير اتجاه النص فقط: Arabic -> rtl, others -> ltr
+  if(l === 'ar') document.documentElement.dir = 'rtl';
+  else document.documentElement.dir = 'ltr';
+}
+
+// small helpers
+document.getElementById('btn-logout').addEventListener('click', ()=>{ localStorage.removeItem('token'); token = null; showSection('auth'); });
+
+// initial
+showSection(token ? 'lobby' : 'auth');
+
+</script>
+</body>
+</html>
